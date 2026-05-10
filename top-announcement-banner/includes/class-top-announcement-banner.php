@@ -27,11 +27,6 @@ final class Top_Announcement_Banner {
     /** @var bool */
     private $banner_displayed = false;
 
-    /**
-     * Get the singleton instance of the class.
-     *
-     * @return self
-     */
     public static function get_instance() {
         if (null === self::$instance) {
             self::$instance = new self();
@@ -40,19 +35,11 @@ final class Top_Announcement_Banner {
         return self::$instance;
     }
 
-    /**
-     * Constructor.
-     */
     private function __construct() {
         $this->load_textdomain();
         $this->register_hooks();
     }
 
-    /**
-     * Register WordPress hooks.
-     *
-     * @return void
-     */
     private function register_hooks() {
         add_action('init', array($this, 'register_blocks'), 10, 0);
         add_action('admin_menu', array($this, 'register_settings_page'), 10, 0);
@@ -66,20 +53,10 @@ final class Top_Announcement_Banner {
         add_action('wp_footer', array($this, 'display_banner'), 10, 0);
     }
 
-    /**
-     * Load the plugin textdomain.
-     *
-     * @return void
-     */
     private function load_textdomain() {
         load_plugin_textdomain('top-announcement-banner');
     }
 
-    /**
-     * Register Gutenberg blocks.
-     *
-     * @return void
-     */
     public function register_blocks() {
         /** @psalm-suppress UndefinedConstant */
         $build_dir = TAB_PLUGIN_DIR . 'build/blocks/call-to-action';
@@ -88,11 +65,6 @@ final class Top_Announcement_Banner {
         }
     }
 
-    /**
-     * Register settings.
-     *
-     * @return void
-     */
     public function register_settings() {
         /** @psalm-suppress InvalidArgument */
         register_setting(
@@ -109,20 +81,10 @@ final class Top_Announcement_Banner {
         );
     }
 
-    /**
-     * Render settings section text.
-     *
-     * @return void
-     */
     public function settings_section_text() {
         echo '<p>' . esc_html__('Configure the top announcement banner that appears on the front end of your site.', 'top-announcement-banner') . '</p>';
     }
 
-    /**
-     * Register the settings page.
-     *
-     * @return void
-     */
     public function register_settings_page() {
         add_options_page(
             __('Top Announcement Banner', 'top-announcement-banner'),
@@ -133,12 +95,6 @@ final class Top_Announcement_Banner {
         );
     }
 
-    /**
-     * Enqueue admin assets.
-     *
-     * @param string $hook The current admin page hook.
-     * @return void
-     */
     public function enqueue_admin_assets($hook) {
         if ($hook !== 'settings_page_top-announcement-banner') {
             return;
@@ -162,11 +118,6 @@ final class Top_Announcement_Banner {
         );
     }
 
-    /**
-     * Enqueue frontend assets.
-     *
-     * @return void
-     */
     public function enqueue_frontend_assets() {
         $options = $this->get_options();
 
@@ -197,11 +148,6 @@ final class Top_Announcement_Banner {
         ));
     }
 
-    /**
-     * Render the settings page.
-     *
-     * @return void
-     */
     public function render_settings_page() {
         $options = $this->get_options();
         ?>
@@ -291,11 +237,6 @@ final class Top_Announcement_Banner {
         <?php
     }
 
-    /**
-     * Display the banner on the frontend.
-     *
-     * @return void
-     */
     public function display_banner() {
         if ($this->banner_displayed) {
             return;
@@ -331,44 +272,36 @@ final class Top_Announcement_Banner {
     }
 
     /**
-     * Sanitize settings.
-     *
-     * @param mixed $input Raw input.
+     * @param mixed $input Raw input from WordPress settings API.
      * @return TabOptions
      */
     public function sanitize_options($input) {
         $defaults = $this->get_default_options();
+        $is_array = is_array($input);
 
         /** @var TabOptions $output */
         $output = array();
         /** @psalm-suppress MixedArrayAccess */
-        $output['enabled'] = (isset($input) && is_array($input) && isset($input['enabled'])) ? 1 : 0;
+        $output['enabled'] = ($is_array && isset($input['enabled'])) ? 1 : 0;
         /** @psalm-suppress MixedArgument */
-        $output['message'] = (isset($input) && is_array($input) && isset($input['message'])) ? sanitize_textarea_field((string) $input['message']) : $defaults['message'];
+        $output['message'] = ($is_array && isset($input['message'])) ? sanitize_textarea_field((string) $input['message']) : $defaults['message'];
         /** @psalm-suppress MixedArgument */
-        $output['button_text'] = (isset($input) && is_array($input) && isset($input['button_text'])) ? sanitize_text_field((string) $input['button_text']) : $defaults['button_text'];
+        $output['button_text'] = ($is_array && isset($input['button_text'])) ? sanitize_text_field((string) $input['button_text']) : $defaults['button_text'];
         /** @psalm-suppress MixedArgument */
-        $output['button_url'] = (isset($input) && is_array($input) && isset($input['button_url'])) ? esc_url_raw((string) $input['button_url']) : $defaults['button_url'];
-        
-        $bg_color = (isset($input) && is_array($input) && isset($input['background_color'])) ? (string) $input['background_color'] : '';
+        $output['button_url'] = ($is_array && isset($input['button_url'])) ? esc_url_raw((string) $input['button_url']) : $defaults['button_url'];
+
+        $bg_color = ($is_array && isset($input['background_color'])) ? (string) $input['background_color'] : '';
         $output['background_color'] = $this->sanitize_hex_color($bg_color, $defaults['background_color']);
 
-        $txt_color = (isset($input) && is_array($input) && isset($input['text_color'])) ? (string) $input['text_color'] : '';
+        $txt_color = ($is_array && isset($input['text_color'])) ? (string) $input['text_color'] : '';
         $output['text_color'] = $this->sanitize_hex_color($txt_color, $defaults['text_color']);
-        
+
         /** @psalm-suppress MixedArrayAccess */
-        $output['dismissible'] = (isset($input) && is_array($input) && isset($input['dismissible'])) ? 1 : 0;
+        $output['dismissible'] = ($is_array && isset($input['dismissible'])) ? 1 : 0;
 
         return $output;
     }
 
-    /**
-     * Sanitize hex color.
-     *
-     * @param string $color   Hex color.
-     * @param string $default Default hex color.
-     * @return string
-     */
     private function sanitize_hex_color($color, $default) {
         if (empty($color)) {
             return $default;
@@ -381,11 +314,7 @@ final class Top_Announcement_Banner {
         return $default;
     }
 
-    /**
-     * Get default options.
-     *
-     * @return TabOptions
-     */
+    /** @return TabOptions */
     private function get_default_options() {
         return array(
             'enabled' => 0,

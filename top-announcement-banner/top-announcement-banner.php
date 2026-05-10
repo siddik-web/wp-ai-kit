@@ -34,20 +34,14 @@ register_activation_hook(__FILE__, 'tab_activate');
 register_deactivation_hook(__FILE__, 'tab_deactivate');
 
 function tab_activate(): void {
-    $defaults = array(
-        'enabled' => 0,
-        'message' => __('Limited time offer: save 25% on your next purchase!', 'top-announcement-banner'),
-        'button_text' => __('Shop Now', 'top-announcement-banner'),
-        'button_url' => '',
-        'background_color' => '#d95459',
-        'text_color' => '#ffffff',
-        'dismissible' => 1,
-    );
-    add_option('top_announcement_banner', $defaults);
+    // Seed with an empty array; get_options() fills in defaults via wp_parse_args.
+    // add_option is a no-op if the option already exists, so re-activation is safe.
+    add_option('top_announcement_banner', array());
 }
 
 function tab_deactivate(): void {
-    // Cleanup if needed.
+    // Nothing to clean up on deactivation. Data is preserved so re-activation
+    // restores previous settings. Permanent cleanup happens in uninstall.php.
 }
 
 function tab_initialize_plugin(): void {
