@@ -28,6 +28,7 @@
     "test": "jest --watchman=false",
     "test:js": "jest --watchman=false",
     "test:wordpress": "echo \"Run WordPress PHP tests with Composer or WP-CLI.\"",
+    "test:a11y": "echo \"Run accessibility tests with Playwright + axe or equivalent tooling.\"",
     "test:e2e": "playwright test",
     "test:performance": "echo \"Run performance analysis with Lighthouse or custom tooling.\"",
     "audit:security": "npm audit --audit-level=high",
