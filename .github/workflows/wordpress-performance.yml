@@ -38,6 +38,15 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y apache2 mysql-server
+          sudo systemctl start mysql
+          sudo mysqladmin ping
+
+      - name: Prepare test database
+        run: |
+          sudo mysql -e "CREATE DATABASE IF NOT EXISTS wordpress_test;"
+          sudo mysql -e "CREATE USER IF NOT EXISTS 'wp'@'127.0.0.1' IDENTIFIED BY 'wp';"
+          sudo mysql -e "GRANT ALL PRIVILEGES ON wordpress_test.* TO 'wp'@'127.0.0.1';"
+          sudo mysql -e "FLUSH PRIVILEGES;"
 
       - name: Install PHP dependencies
         run: composer install --no-dev --optimize-autoloader
@@ -57,7 +66,7 @@ jobs:
         run: |
           # Install WordPress
           wp core download --path=/tmp/wordpress
-          wp core config --path=/tmp/wordpress --dbname=test --dbuser=root --dbpass='' --dbhost=127.0.0.1
+          wp core config --path=/tmp/wordpress --dbname=wordpress_test --dbuser=wp --dbpass=wp --dbhost=127.0.0.1
           wp core install --path=/tmp/wordpress --url=http://localhost:8080 --title="Performance Test" --admin_user=admin --admin_password=password --admin_email=admin@example.com
 
           # Install and activate the plugin
