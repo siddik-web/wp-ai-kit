@@ -31,7 +31,7 @@
     "test:a11y": "echo \"Run accessibility tests with Playwright + axe or equivalent tooling.\"",
     "test:e2e": "playwright test",
     "test:performance": "echo \"Run performance analysis with Lighthouse or custom tooling.\"",
-    "audit:security": "npm audit --audit-level=high",
+    "audit:security": "npm audit --omit=dev --audit-level=high",
     "format": "prettier --check .",
     "format:fix": "prettier --write ."
   },

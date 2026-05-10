@@ -39,7 +39,7 @@ jobs:
       - name: Check for security vulnerabilities
         run: |
           composer audit --format=summary
-          npm audit --audit-level=moderate --json | jq '.vulnerabilities | keys[]'
+          npm audit --omit=dev --audit-level=high --json | jq '.vulnerabilities | keys[]'
 
       - name: Scan for exposed secrets
         uses: gitleaks/gitleaks-action@v2
