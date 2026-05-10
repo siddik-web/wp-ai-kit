@@ -255,8 +255,14 @@ class Top_Announcement_Banner {
         $output['message'] = isset($input['message']) ? sanitize_textarea_field($input['message']) : $defaults['message'];
         $output['button_text'] = isset($input['button_text']) ? sanitize_text_field($input['button_text']) : $defaults['button_text'];
         $output['button_url'] = isset($input['button_url']) ? esc_url_raw($input['button_url']) : $defaults['button_url'];
-        $output['background_color'] = $this->sanitize_hex_color($input['background_color'], $defaults['background_color']);
-        $output['text_color'] = $this->sanitize_hex_color($input['text_color'], $defaults['text_color']);
+        $output['background_color'] = $this->sanitize_hex_color(
+            isset($input['background_color']) ? $input['background_color'] : '',
+            $defaults['background_color']
+        );
+        $output['text_color'] = $this->sanitize_hex_color(
+            isset($input['text_color']) ? $input['text_color'] : '',
+            $defaults['text_color']
+        );
         $output['dismissible'] = isset($input['dismissible']) ? 1 : 0;
 
         return $output;
