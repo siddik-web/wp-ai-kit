@@ -13,7 +13,6 @@
         <file name="top-announcement-banner/top-announcement-banner.php"/>
         <ignoreFiles>
             <directory name="vendor"/>
-            <directory name="node_modules"/>
         </ignoreFiles>
     </projectFiles>
 <plugins><pluginClass class="PsalmWordPress\Plugin"/></plugins></psalm>
