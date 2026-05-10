@@ -28,7 +28,9 @@
   "scripts": {
     "lint": "phpcs --standard=phpcs.xml.dist",
     "lint:fix": "phpcbf .",
-    "test": "phpunit --configuration phpunit.xml.dist"
+    "test": "phpunit --configuration phpunit.xml.dist",
+    "test:security": "grep -R --line-number --include='*.php' -E '\\beval\\s*\\(|\\bassert\\s*\\(' top-announcement-banner && exit 1 || exit 0",
+    "test:performance": "php -r \"echo 'No dedicated performance suite configured.' . PHP_EOL;\""
   },
   "config": {
     "allow-plugins": {

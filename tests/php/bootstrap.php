@@ -26,14 +26,20 @@ if (! function_exists('__')) {
 if (! function_exists('sanitize_textarea_field')) {
     function sanitize_textarea_field($value)
     {
-        return trim(strip_tags((string) $value));
+        $sanitized = preg_replace('@<(script|style)\b[^>]*>.*?</\1>@is', '', (string) $value);
+        $sanitized = preg_replace('/<[^>]+>/', '', (string) $sanitized);
+
+        return trim((string) $sanitized);
     }
 }
 
 if (! function_exists('sanitize_text_field')) {
     function sanitize_text_field($value)
     {
-        return trim(strip_tags((string) $value));
+        $sanitized = preg_replace('@<(script|style)\b[^>]*>.*?</\1>@is', '', (string) $value);
+        $sanitized = preg_replace('/<[^>]+>/', '', (string) $sanitized);
+
+        return trim((string) $sanitized);
     }
 }
 
