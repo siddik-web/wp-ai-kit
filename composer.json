@@ -14,10 +14,12 @@
     "php": ">=7.4"
   },
   "require-dev": {
-    "wp-coding-standards/wpcs": "^3.1",
-    "phpcompatibility/phpcompatibility-wp": "^2.1",
     "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+    "humanmade/psalm-plugin-wordpress": "^3.1",
+    "phpcompatibility/phpcompatibility-wp": "^2.1",
     "phpunit/phpunit": "^9.6",
+    "vimeo/psalm": "^6.16",
+    "wp-coding-standards/wpcs": "^3.1",
     "yoast/phpunit-polyfills": "^2.0"
   },
   "autoload": {
@@ -28,6 +30,7 @@
   "scripts": {
     "lint": "phpcs --standard=phpcs.xml.dist",
     "lint:fix": "phpcbf .",
+    "psalm": "./vendor/bin/psalm",
     "test": "phpunit --configuration phpunit.xml.dist",
     "test:security": "grep -R --line-number --include='*.php' -E '\\beval\\s*\\(|\\bassert\\s*\\(' top-announcement-banner && exit 1 || exit 0",
     "test:performance": "php -r \"echo 'No dedicated performance suite configured.' . PHP_EOL;\""
