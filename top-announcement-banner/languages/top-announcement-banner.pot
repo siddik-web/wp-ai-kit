@@ -1,0 +1,157 @@
+# Copyright (C) 2026 Md Siddiqur Rahman
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Top Announcement Banner 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/top-announcement-banner\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-05-10T03:23:18+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.11.0\n"
+"X-Domain: top-announcement-banner\n"
+
+#. Plugin Name of the plugin
+#: top-announcement-banner.php
+#: includes/class-top-announcement-banner.php:70
+#: includes/class-top-announcement-banner.php:131
+msgid "Top Announcement Banner"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: top-announcement-banner.php
+msgid "https://github.com/siddik-web/top-announcement-banner.php"
+msgstr ""
+
+#. Description of the plugin
+#: top-announcement-banner.php
+msgid "Show a campaign or offer announcement banner at the top of your WordPress site."
+msgstr ""
+
+#. Author of the plugin
+#: top-announcement-banner.php
+msgid "Md Siddiqur Rahman"
+msgstr ""
+
+#. Author URI of the plugin
+#: top-announcement-banner.php
+msgid "https://siddiqur.com"
+msgstr ""
+
+#: includes/class-top-announcement-banner.php:58
+msgid "Announcement Banner Settings"
+msgstr ""
+
+#: includes/class-top-announcement-banner.php:65
+msgid "Configure the top announcement banner that appears on the front end of your site."
+msgstr ""
+
+#: includes/class-top-announcement-banner.php:71
+msgid "Announcement Banner"
+msgstr ""
+
+#: includes/class-top-announcement-banner.php:140
+msgid "Enable Banner"
+msgstr ""
+
+#: includes/class-top-announcement-banner.php:144
+msgid "Show the banner on the frontend."
+msgstr ""
+
+#: includes/class-top-announcement-banner.php:149
+msgid "Announcement Text"
+msgstr ""
+
+#: includes/class-top-announcement-banner.php:153
+msgid "Enter the campaign or offer message to show in the banner."
+msgstr ""
+
+#: includes/class-top-announcement-banner.php:158
+msgid "Button Text"
+msgstr ""
+
+#: includes/class-top-announcement-banner.php:166
+#: src/blocks/call-to-action/edit.js:28
+msgid "Button URL"
+msgstr ""
+
+#: includes/class-top-announcement-banner.php:174
+msgid "Background Color"
+msgstr ""
+
+#: includes/class-top-announcement-banner.php:178
+msgid "Use a hex color for the banner background."
+msgstr ""
+
+#: includes/class-top-announcement-banner.php:183
+msgid "Text Color"
+msgstr ""
+
+#: includes/class-top-announcement-banner.php:191
+msgid "Dismissible Banner"
+msgstr ""
+
+#: includes/class-top-announcement-banner.php:195
+msgid "Allow visitors to close the banner."
+msgstr ""
+
+#: includes/class-top-announcement-banner.php:200
+msgid "Preview"
+msgstr ""
+
+#: includes/class-top-announcement-banner.php:244
+msgid "Close announcement"
+msgstr ""
+
+#: includes/class-top-announcement-banner.php:280
+msgid "Limited time offer: save 25% on your next purchase!"
+msgstr ""
+
+#: includes/class-top-announcement-banner.php:281
+msgid "Shop Now"
+msgstr ""
+
+#: src/blocks/call-to-action/edit.js:24
+msgid "Button"
+msgstr ""
+
+#: src/blocks/call-to-action/edit.js:47
+msgid "Call to action title…"
+msgstr ""
+
+#: src/blocks/call-to-action/edit.js:62
+msgid "Button text…"
+msgstr ""
+
+#: src/blocks/call-to-action/block.json
+msgctxt "block title"
+msgid "Call to Action"
+msgstr ""
+
+#: src/blocks/call-to-action/block.json
+msgctxt "block description"
+msgid "A call-to-action section with a title and a linked button."
+msgstr ""
+
+#: src/blocks/call-to-action/block.json
+msgctxt "block keyword"
+msgid "cta"
+msgstr ""
+
+#: src/blocks/call-to-action/block.json
+msgctxt "block keyword"
+msgid "button"
+msgstr ""
+
+#: src/blocks/call-to-action/block.json
+msgctxt "block keyword"
+msgid "call to action"
+msgstr ""
+
+#: src/blocks/call-to-action/block.json
+msgctxt "block keyword"
+msgid "promotion"
+msgstr ""

@@ -1,0 +1,42 @@
+{
+  "name": "siddik-web/wp-ai-kit",
+  "description": "Production-grade starter kit for AI-assisted WordPress development.",
+  "type": "project",
+  "license": "GPL-2.0-or-later",
+  "authors": [
+    {
+      "name": "Md Siddiqur Rahman",
+      "email": "siddikcoder@gmail.com"
+    }
+  ],
+  "minimum-stability": "stable",
+  "require": {
+    "php": ">=7.4"
+  },
+  "require-dev": {
+    "wp-coding-standards/wpcs": "^3.1",
+    "phpcompatibility/phpcompatibility-wp": "^2.1",
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+    "phpunit/phpunit": "^9.6",
+    "yoast/phpunit-polyfills": "^2.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "WPAIKit\\": "top-announcement-banner/includes/"
+    }
+  },
+  "scripts": {
+    "lint": "phpcs .",
+    "lint:fix": "phpcbf .",
+    "test": "phpunit",
+    "post-install-cmd": [
+      "\"vendor/bin/phpcs\" --config-set installed_paths vendor/wp-coding-standards/wpcs,vendor/phpcompatibility/phpcompatibility-wp,vendor/phpcompatibility/php-compatibility"
+    ]
+  },
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    },
+    "sort-packages": true
+  }
+}

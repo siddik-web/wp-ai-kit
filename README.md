@@ -63,7 +63,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/wp-ai-kit.git
+git clone https://github.com/siddik-web/wp-ai-kit.git
 cd wp-ai-kit
 
 # Install dependencies
@@ -337,7 +337,7 @@ We welcome contributions from the community! Here's how to get involved:
 ### Development Setup
 
 ```bash
-git clone https://github.com/your-org/wp-ai-kit.git
+git clone https://github.com/siddik-web/wp-ai-kit.git
 cd wp-ai-kit
 npm install
 composer install
@@ -398,8 +398,8 @@ This project is licensed under the **GPL v2 or later** - see the [LICENSE](LICEN
 ## 📞 Support
 
 - **Documentation**: [USER-GUIDE.md](USER-GUIDE.md)
-- **Issues**: [GitHub Issues](https://github.com/your-org/wp-ai-kit/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/wp-ai-kit/discussions)
+- **Issues**: [GitHub Issues](https://github.com/siddik-web/wp-ai-kit/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/siddik-web/wp-ai-kit/discussions)
 - **Email**: support@wp-ai-kit.com
 
 ---

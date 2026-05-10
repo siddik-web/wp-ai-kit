@@ -1,14 +1,14 @@
 <?php
 /**
  * Plugin Name: Top Announcement Banner
- * Plugin URI: https://github.com/your-org/wp-ai-kit
+ * Plugin URI: https://github.com/siddik-web/top-announcement-banner.php
  * Description: Show a campaign or offer announcement banner at the top of your WordPress site.
  * Version: 1.0.0
  * Requires at least: 6.0
  * Tested up to: 6.7
  * Requires PHP: 7.4
- * Author: Your Name
- * Author URI: https://example.com
+ * Author: Md Siddiqur Rahman
+ * Author URI: https://siddiqur.com
  * License: GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: top-announcement-banner
