@@ -94,6 +94,8 @@ module.exports = (env, argv) => {
         analyzerMode: 'static',
         openAnalyzer: false,
         reportFilename: 'report.html',
+        generateStatsFile: true,
+        statsFilename: 'report.json',
       }),
     ],
     performance: {
