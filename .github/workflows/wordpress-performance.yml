@@ -49,8 +49,24 @@ jobs:
           GRANT ALL PRIVILEGES ON wordpress_test.* TO 'wp'@'localhost';
           GRANT ALL PRIVILEGES ON wordpress_test.* TO 'wp'@'127.0.0.1';
           FLUSH PRIVILEGES;"
+          if command -v mariadb >/dev/null 2>&1 && sudo mariadb -e "$SQL"; then
+            exit 0
+          fi
 
-          sudo mariadb -e "$SQL" || sudo mysql --protocol=socket -u root -e "$SQL"
+          if sudo mysql --protocol=socket -u root -e "$SQL"; then
+            exit 0
+          fi
+
+          if sudo mysql -h 127.0.0.1 -u root -proot -e "$SQL"; then
+            exit 0
+          fi
+
+          if sudo mysql -u root -proot -e "$SQL"; then
+            exit 0
+          fi
+
+          echo "Failed to initialize MySQL test database with available auth methods."
+          exit 1
 
       - name: Install PHP dependencies
         run: composer install --no-dev --optimize-autoloader

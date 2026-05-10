@@ -7,7 +7,7 @@ set -euo pipefail
 
 DB_NAME="${1:-wordpress_test}"
 DB_USER="${2:-root}"
-DB_PASS="${3:-}"
+DB_PASS="${3:-root}"
 DB_HOST="${4:-localhost}"
 WP_VERSION="${5:-latest}"
 SKIP_DB_CREATE="${6:-true}"
