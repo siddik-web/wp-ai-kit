@@ -90,8 +90,8 @@ jobs:
           wp core install --path=/tmp/wordpress --url=http://localhost:8080 --title="Performance Test" --admin_user=admin --admin_password=password --admin_email=admin@example.com
 
           # Install and activate the plugin
-          cp -r . /tmp/wordpress/wp-content/plugins/${{ github.event.repository.name }}
-          wp --path=/tmp/wordpress plugin activate ${{ github.event.repository.name }}
+          cp -r top-announcement-banner /tmp/wordpress/wp-content/plugins/top-announcement-banner
+          wp --path=/tmp/wordpress plugin activate top-announcement-banner
 
       - name: Build optimized assets
         run: npm run build:production
