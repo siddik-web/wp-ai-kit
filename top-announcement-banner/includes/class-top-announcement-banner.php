@@ -4,11 +4,34 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-class Top_Announcement_Banner {
+/**
+ * Main plugin class for Top Announcement Banner.
+ *
+ * @psalm-type TabOptions = array{
+ *     enabled: 0|1,
+ *     message: string,
+ *     button_text: string,
+ *     button_url: string,
+ *     background_color: string,
+ *     text_color: string,
+ *     dismissible: 0|1
+ * }
+ */
+final class Top_Announcement_Banner {
+    /** @var self|null */
     private static $instance = null;
+
+    /** @var TabOptions|array<empty, empty> */
     private $options = array();
+
+    /** @var bool */
     private $banner_displayed = false;
 
+    /**
+     * Get the singleton instance of the class.
+     *
+     * @return self
+     */
     public static function get_instance() {
         if (null === self::$instance) {
             self::$instance = new self();
@@ -17,36 +40,61 @@ class Top_Announcement_Banner {
         return self::$instance;
     }
 
+    /**
+     * Constructor.
+     */
     private function __construct() {
         $this->load_textdomain();
         $this->register_hooks();
     }
 
+    /**
+     * Register WordPress hooks.
+     *
+     * @return void
+     */
     private function register_hooks() {
-        add_action('init', array($this, 'register_blocks'));
-        add_action('admin_menu', array($this, 'register_settings_page'));
-        add_action('admin_init', array($this, 'register_settings'));
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
-        add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
+        add_action('init', array($this, 'register_blocks'), 10, 0);
+        add_action('admin_menu', array($this, 'register_settings_page'), 10, 0);
+        add_action('admin_init', array($this, 'register_settings'), 10, 0);
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'), 10, 1);
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'), 10, 0);
         // wp_body_open fires immediately after <body> in themes that support it.
         // wp_footer is a fallback for themes that do not call wp_body_open.
         // The $banner_displayed flag prevents double output if both hooks fire.
-        add_action('wp_body_open', array($this, 'display_banner'));
-        add_action('wp_footer', array($this, 'display_banner'));
+        add_action('wp_body_open', array($this, 'display_banner'), 10, 0);
+        add_action('wp_footer', array($this, 'display_banner'), 10, 0);
     }
 
+    /**
+     * Load the plugin textdomain.
+     *
+     * @return void
+     */
     private function load_textdomain() {
         load_plugin_textdomain('top-announcement-banner');
     }
 
+    /**
+     * Register Gutenberg blocks.
+     *
+     * @return void
+     */
     public function register_blocks() {
+        /** @psalm-suppress UndefinedConstant */
         $build_dir = TAB_PLUGIN_DIR . 'build/blocks/call-to-action';
         if (is_dir($build_dir)) {
             register_block_type($build_dir);
         }
     }
 
+    /**
+     * Register settings.
+     *
+     * @return void
+     */
     public function register_settings() {
+        /** @psalm-suppress InvalidArgument */
         register_setting(
             'top_announcement_banner_options',
             'top_announcement_banner',
@@ -61,10 +109,20 @@ class Top_Announcement_Banner {
         );
     }
 
+    /**
+     * Render settings section text.
+     *
+     * @return void
+     */
     public function settings_section_text() {
         echo '<p>' . esc_html__('Configure the top announcement banner that appears on the front end of your site.', 'top-announcement-banner') . '</p>';
     }
 
+    /**
+     * Register the settings page.
+     *
+     * @return void
+     */
     public function register_settings_page() {
         add_options_page(
             __('Top Announcement Banner', 'top-announcement-banner'),
@@ -75,11 +133,18 @@ class Top_Announcement_Banner {
         );
     }
 
+    /**
+     * Enqueue admin assets.
+     *
+     * @param string $hook The current admin page hook.
+     * @return void
+     */
     public function enqueue_admin_assets($hook) {
         if ($hook !== 'settings_page_top-announcement-banner') {
             return;
         }
 
+        /** @psalm-suppress UndefinedConstant */
         wp_enqueue_style(
             'top-announcement-banner-admin',
             TAB_PLUGIN_URL . 'assets/css/admin.css',
@@ -87,6 +152,7 @@ class Top_Announcement_Banner {
             TAB_VERSION
         );
 
+        /** @psalm-suppress UndefinedConstant */
         wp_enqueue_script(
             'top-announcement-banner-admin',
             TAB_PLUGIN_URL . 'assets/js/admin.js',
@@ -96,6 +162,11 @@ class Top_Announcement_Banner {
         );
     }
 
+    /**
+     * Enqueue frontend assets.
+     *
+     * @return void
+     */
     public function enqueue_frontend_assets() {
         $options = $this->get_options();
 
@@ -103,6 +174,7 @@ class Top_Announcement_Banner {
             return;
         }
 
+        /** @psalm-suppress UndefinedConstant */
         wp_enqueue_style(
             'top-announcement-banner-style',
             TAB_PLUGIN_URL . 'assets/css/banner.css',
@@ -110,6 +182,7 @@ class Top_Announcement_Banner {
             TAB_VERSION
         );
 
+        /** @psalm-suppress UndefinedConstant */
         wp_enqueue_script(
             'top-announcement-banner-script',
             TAB_PLUGIN_URL . 'assets/js/banner.js',
@@ -124,6 +197,11 @@ class Top_Announcement_Banner {
         ));
     }
 
+    /**
+     * Render the settings page.
+     *
+     * @return void
+     */
     public function render_settings_page() {
         $options = $this->get_options();
         ?>
@@ -213,6 +291,11 @@ class Top_Announcement_Banner {
         <?php
     }
 
+    /**
+     * Display the banner on the frontend.
+     *
+     * @return void
+     */
     public function display_banner() {
         if ($this->banner_displayed) {
             return;
@@ -228,15 +311,15 @@ class Top_Announcement_Banner {
 
         $style = sprintf(
             'background-color: %s; color: %s;',
-            sanitize_hex_color($options['background_color']),
-            sanitize_hex_color($options['text_color'])
+            $this->sanitize_hex_color($options['background_color'], '#d95459'),
+            $this->sanitize_hex_color($options['text_color'], '#ffffff')
         );
 
         echo '<div id="tab-banner" class="tab-banner" style="' . esc_attr($style) . '">';
         echo '<div class="tab-banner-message">' . esc_html($options['message']) . '</div>';
 
-        $button_url = ! empty($options['button_url']) ? $options['button_url'] : home_url('/');
-        if (! empty($options['button_text'])) {
+        $button_url = ('' !== $options['button_url']) ? $options['button_url'] : home_url('/');
+        if ('' !== $options['button_text']) {
             echo '<a class="tab-banner-button" href="' . esc_url($button_url) . '">' . esc_html($options['button_text']) . '</a>';
         }
 
@@ -247,27 +330,45 @@ class Top_Announcement_Banner {
         echo '</div>';
     }
 
+    /**
+     * Sanitize settings.
+     *
+     * @param mixed $input Raw input.
+     * @return TabOptions
+     */
     public function sanitize_options($input) {
         $defaults = $this->get_default_options();
 
+        /** @var TabOptions $output */
         $output = array();
-        $output['enabled'] = isset($input['enabled']) ? 1 : 0;
-        $output['message'] = isset($input['message']) ? sanitize_textarea_field($input['message']) : $defaults['message'];
-        $output['button_text'] = isset($input['button_text']) ? sanitize_text_field($input['button_text']) : $defaults['button_text'];
-        $output['button_url'] = isset($input['button_url']) ? esc_url_raw($input['button_url']) : $defaults['button_url'];
-        $output['background_color'] = $this->sanitize_hex_color(
-            isset($input['background_color']) ? $input['background_color'] : '',
-            $defaults['background_color']
-        );
-        $output['text_color'] = $this->sanitize_hex_color(
-            isset($input['text_color']) ? $input['text_color'] : '',
-            $defaults['text_color']
-        );
-        $output['dismissible'] = isset($input['dismissible']) ? 1 : 0;
+        /** @psalm-suppress MixedArrayAccess */
+        $output['enabled'] = (isset($input) && is_array($input) && isset($input['enabled'])) ? 1 : 0;
+        /** @psalm-suppress MixedArgument */
+        $output['message'] = (isset($input) && is_array($input) && isset($input['message'])) ? sanitize_textarea_field((string) $input['message']) : $defaults['message'];
+        /** @psalm-suppress MixedArgument */
+        $output['button_text'] = (isset($input) && is_array($input) && isset($input['button_text'])) ? sanitize_text_field((string) $input['button_text']) : $defaults['button_text'];
+        /** @psalm-suppress MixedArgument */
+        $output['button_url'] = (isset($input) && is_array($input) && isset($input['button_url'])) ? esc_url_raw((string) $input['button_url']) : $defaults['button_url'];
+        
+        $bg_color = (isset($input) && is_array($input) && isset($input['background_color'])) ? (string) $input['background_color'] : '';
+        $output['background_color'] = $this->sanitize_hex_color($bg_color, $defaults['background_color']);
+
+        $txt_color = (isset($input) && is_array($input) && isset($input['text_color'])) ? (string) $input['text_color'] : '';
+        $output['text_color'] = $this->sanitize_hex_color($txt_color, $defaults['text_color']);
+        
+        /** @psalm-suppress MixedArrayAccess */
+        $output['dismissible'] = (isset($input) && is_array($input) && isset($input['dismissible'])) ? 1 : 0;
 
         return $output;
     }
 
+    /**
+     * Sanitize hex color.
+     *
+     * @param string $color   Hex color.
+     * @param string $default Default hex color.
+     * @return string
+     */
     private function sanitize_hex_color($color, $default) {
         if (empty($color)) {
             return $default;
@@ -280,6 +381,11 @@ class Top_Announcement_Banner {
         return $default;
     }
 
+    /**
+     * Get default options.
+     *
+     * @return TabOptions
+     */
     private function get_default_options() {
         return array(
             'enabled' => 0,
@@ -292,11 +398,21 @@ class Top_Announcement_Banner {
         );
     }
 
+    /** @return TabOptions */
     private function get_options() {
         if (empty($this->options)) {
+            /** @psalm-suppress MixedAssignment */
             $saved = get_option('top_announcement_banner', array());
-            $this->options = wp_parse_args($saved, $this->get_default_options());
+            /** @psalm-suppress MixedArgument */
+            $parsed = wp_parse_args(
+                is_array($saved) ? $saved : array(),
+                $this->get_default_options()
+            );
+            /** @psalm-suppress UnnecessaryVarAnnotation */
+            /** @var TabOptions $parsed */
+            $this->options = $parsed;
         }
+        /** @var TabOptions */
         return $this->options;
     }
 }

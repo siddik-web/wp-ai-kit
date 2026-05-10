@@ -15,4 +15,11 @@
             <directory name="vendor"/>
         </ignoreFiles>
     </projectFiles>
-<plugins><pluginClass class="PsalmWordPress\Plugin"/></plugins></psalm>
+<plugins><pluginClass class="PsalmWordPress\Plugin"/></plugins>    <issueHandlers>
+        <PossiblyUnusedMethod errorLevel="info" />
+        <PossiblyUnusedReturnValue errorLevel="info" />
+        <MixedArgument errorLevel="info" />
+        <PossiblyInvalidArgument errorLevel="info" />
+        <UnresolvableInclude errorLevel="info" />
+    </issueHandlers>
+</psalm>

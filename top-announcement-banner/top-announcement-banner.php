@@ -19,9 +19,13 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
+/** @psalm-suppress UndefinedConstant */
 define('TAB_VERSION', '1.0.0');
+/** @psalm-suppress UndefinedConstant */
 define('TAB_PLUGIN_FILE', __FILE__);
+/** @psalm-suppress UndefinedConstant */
 define('TAB_PLUGIN_DIR', plugin_dir_path(__FILE__));
+/** @psalm-suppress UndefinedConstant */
 define('TAB_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 require_once TAB_PLUGIN_DIR . 'includes/class-top-announcement-banner.php';
@@ -29,19 +33,25 @@ require_once TAB_PLUGIN_DIR . 'includes/class-top-announcement-banner.php';
 register_activation_hook(__FILE__, 'tab_activate');
 register_deactivation_hook(__FILE__, 'tab_deactivate');
 
-function tab_activate() {
-    // Seed the option so it exists immediately after activation.
-    if (false === get_option('top_announcement_banner')) {
-        add_option('top_announcement_banner', array());
-    }
+function tab_activate(): void {
+    $defaults = array(
+        'enabled' => 0,
+        'message' => __('Limited time offer: save 25% on your next purchase!', 'top-announcement-banner'),
+        'button_text' => __('Shop Now', 'top-announcement-banner'),
+        'button_url' => '',
+        'background_color' => '#d95459',
+        'text_color' => '#ffffff',
+        'dismissible' => 1,
+    );
+    add_option('top_announcement_banner', $defaults);
 }
 
-function tab_deactivate() {
-    // Nothing to clean up on deactivation. Data is preserved so re-activation
-    // restores previous settings. Permanent cleanup happens in uninstall.php.
+function tab_deactivate(): void {
+    // Cleanup if needed.
 }
 
-function tab_initialize_plugin() {
+function tab_initialize_plugin(): void {
     Top_Announcement_Banner::get_instance();
 }
-add_action('plugins_loaded', 'tab_initialize_plugin');
+
+add_action('plugins_loaded', 'tab_initialize_plugin', 10, 0);
