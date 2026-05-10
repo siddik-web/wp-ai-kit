@@ -1,0 +1,258 @@
+name: WordPress CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: wp-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  wordpress-validate:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.2', '8.3']
+        wordpress: ['latest']
+        include:
+          - php: '8.1'
+            wordpress: '6.4'
+          - php: '8.2'
+            wordpress: '6.5'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mysql, zip, gd, mbstring, curl, xml, intl
+          coverage: xdebug
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-${{ matrix.php }}-
+
+      - name: Install PHP dependencies
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Setup WordPress test environment
+        run: |
+          bash bin/install-wp-tests.sh wordpress_test root '' localhost ${{ matrix.wordpress }} true
+
+      - name: Run PHP tests
+        run: composer test
+
+      - name: Run WordPress integration tests
+        run: composer test:integration
+
+      - name: PHP CodeSniffer
+        run: composer run phpcs
+
+      - name: PHPStan static analysis
+        run: composer run phpstan
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Lint JavaScript/TypeScript
+        run: npm run lint:js
+
+      - name: Test JavaScript/TypeScript
+        run: npm run test:js
+
+  wordpress-security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysql, zip, gd, mbstring, curl, xml, intl
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      - name: WordPress VIP CS
+        run: |
+          composer require --dev automattic/vipwpcs
+          ./vendor/bin/phpcs --standard=WordPress-VIP-Go --extensions=php --ignore=vendor,node_modules .
+
+      - name: Security scan with WPScan
+        uses: docker://wpscanteam/wpscan:latest
+        with:
+          args: --url https://github.com/${{ github.repository }} --api-token ${{ secrets.WPSCAN_API_TOKEN }}
+
+      - name: Check for vulnerable dependencies
+        run: |
+          composer audit
+          npm audit --audit-level=moderate
+
+  wordpress-performance:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysql, zip, gd, mbstring, curl, xml, intl
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          composer install --no-dev --optimize-autoloader
+          npm ci
+
+      - name: Build production assets
+        run: npm run build:production
+
+      - name: Analyze bundle size
+        run: |
+          npx webpack-bundle-analyzer dist/static/js/*.js --mode static --report dist/bundle-analysis.html
+          npx bundlesize
+
+      - name: PHP performance analysis
+        run: |
+          composer require --dev phpbench/phpbench
+          ./vendor/bin/phpbench run --report=aggregate
+
+      - name: Lighthouse CI
+        run: |
+          npm install -g lighthouse
+          lighthouse https://example.com --output json --output html --output-path ./lighthouse-report.json
+
+  wordpress-e2e:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysql, zip, gd, mbstring, curl, xml, intl
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache Cypress
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install dependencies
+        run: |
+          composer install --no-dev --optimize-autoloader
+          npm ci
+
+      - name: Setup test WordPress site
+        run: |
+          # Install WordPress test environment
+          wp core download --path=/tmp/wordpress
+          wp core config --path=/tmp/wordpress --dbname=test --dbuser=root --dbpass='' --dbhost=127.0.0.1
+          wp core install --path=/tmp/wordpress --url=http://localhost:8080 --title="Test Site" --admin_user=admin --admin_password=password --admin_email=admin@example.com
+
+      - name: Start test server
+        run: |
+          wp server --path=/tmp/wordpress --host=127.0.0.1 --port=8080 &
+          sleep 10
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-results
+          path: |
+            cypress/videos/
+            cypress/screenshots/
+            test-results/
+
+  wordpress-deploy:
+    runs-on: ubuntu-latest
+    needs: [wordpress-validate, wordpress-security, wordpress-performance]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysql, zip, gd, mbstring, curl, xml, intl
+
+      - name: Install dependencies
+        run: |
+          composer install --no-dev --optimize-autoloader
+          npm ci
+
+      - name: Build for production
+        run: npm run build:production
+
+      - name: Create deployment package
+        run: |
+          # Create clean deployment package
+          mkdir deploy
+          cp -r * deploy/
+          rm -rf deploy/node_modules deploy/.git deploy/tests deploy/.github
+          cd deploy && zip -r ../deploy.zip .
+
+      - name: Deploy to staging
+        run: |
+          # Deploy to staging environment
+          echo "Deploying to staging..."
+          # Add your deployment commands here
+
+      - name: Run smoke tests on staging
+        run: |
+          # Run basic smoke tests on staging
+          echo "Running smoke tests..."
+          # Add smoke test commands here
+
+      - name: Deploy to production
+        if: github.event.inputs.deploy_to_production == 'true'
+        run: |
+          # Deploy to production environment
+          echo "Deploying to production..."
+          # Add production deployment commands here

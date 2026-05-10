@@ -1,0 +1,9 @@
+// Editor-only overrides for the Call to Action block.
+.wp-block-wp-ai-kit-call-to-action {
+  &__button {
+    // Allow inline editing of the button text without triggering the link.
+    cursor: text;
+    user-select: text;
+    pointer-events: none;
+  }
+}

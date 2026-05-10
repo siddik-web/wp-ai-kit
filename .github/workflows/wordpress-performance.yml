@@ -1,0 +1,345 @@
+name: WordPress Performance
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    # Run weekly performance benchmarks
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      test_url:
+        description: 'URL to test performance against'
+        required: false
+        type: string
+
+jobs:
+  wordpress-performance-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysql, zip, gd, mbstring, curl, xml, intl, opcache, xdebug
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apache2 mysql-server
+
+      - name: Install PHP dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Setup WordPress test environment
+        run: |
+          # Install WordPress
+          wp core download --path=/tmp/wordpress
+          wp core config --path=/tmp/wordpress --dbname=test --dbuser=root --dbpass='' --dbhost=127.0.0.1
+          wp core install --path=/tmp/wordpress --url=http://localhost:8080 --title="Performance Test" --admin_user=admin --admin_password=password --admin_email=admin@example.com
+
+          # Install and activate the plugin
+          cp -r . /tmp/wordpress/wp-content/plugins/${{ github.event.repository.name }}
+          wp --path=/tmp/wordpress plugin activate ${{ github.event.repository.name }}
+
+      - name: Build optimized assets
+        run: npm run build:production
+
+      - name: Start test server
+        run: |
+          wp --path=/tmp/wordpress server --host=127.0.0.1 --port=8080 &
+          sleep 10
+
+      - name: Run Lighthouse performance audit
+        run: |
+          npm install -g lighthouse
+          lighthouse http://localhost:8080 \
+            --output json \
+            --output html \
+            --output-path ./lighthouse-report.json \
+            --chrome-flags="--headless --disable-gpu --no-sandbox"
+
+      - name: Analyze bundle size
+        run: |
+          npx webpack-bundle-analyzer dist/static/js/*.js \
+            --mode static \
+            --report dist/bundle-analysis.html \
+            --port 8888 &
+          sleep 5
+          curl -s http://localhost:8888 > bundle-analysis.json
+
+      - name: PHP performance profiling
+        run: |
+          # Install XHProf or similar profiler
+          composer require --dev tideways/php-xhprof-extension
+
+          # Run performance tests
+          php -d xhprof.output_dir=/tmp/xhprof -d auto_prepend_file=/path/to/xhprof.php \
+            vendor/bin/phpunit --testsuite performance
+
+      - name: Database query analysis
+        run: |
+          # Enable query monitoring
+          wp --path=/tmp/wordpress eval "
+          global \$wpdb;
+          \$wpdb->queries = array();
+          // Load a page to capture queries
+          wp_remote_get('http://localhost:8080');
+          file_put_contents('/tmp/queries.log', print_r(\$wpdb->queries, true));
+          "
+
+          # Analyze query log
+          php -r "
+          \$queries = include '/tmp/queries.log';
+          \$total_time = 0;
+          \$slow_queries = array();
+          foreach (\$queries as \$query) {
+            \$total_time += \$query[1];
+            if (\$query[1] > 0.1) { // Queries taking more than 100ms
+              \$slow_queries[] = \$query;
+            }
+          }
+          echo \"Total query time: {\$total_time}s\n\";
+          echo \"Slow queries: \" . count(\$slow_queries) . \"\n\";
+          "
+
+      - name: Memory usage analysis
+        run: |
+          # Test memory usage
+          php -r "
+          \$start_memory = memory_get_peak_usage(true);
+          // Simulate plugin load
+          require_once '/tmp/wordpress/wp-load.php';
+          \$end_memory = memory_get_peak_usage(true);
+          \$used_memory = (\$end_memory - \$start_memory) / 1024 / 1024;
+          echo \"Memory usage: {\$used_memory} MB\n\";
+          "
+
+      - name: Upload performance results
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-results
+          path: |
+            lighthouse-report.json
+            lighthouse-report.html
+            bundle-analysis.json
+            bundle-analysis.html
+
+  wordpress-load-test:
+    runs-on: ubuntu-latest
+    needs: wordpress-performance-test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup k6
+        run: |
+          curl -s https://dl.k6.io/key.gpg | sudo apt-key add -
+          echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Setup test environment
+        run: |
+          # Start a simple test server
+          python3 -m http.server 8000 &
+          sleep 5
+
+      - name: Create load test script
+        run: |
+          cat > load-test.js << 'EOF'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+
+          export let options = {
+            stages: [
+              { duration: '2m', target: 100 }, // Ramp up to 100 users over 2 minutes
+              { duration: '5m', target: 100 }, // Stay at 100 users for 5 minutes
+              { duration: '2m', target: 200 }, // Ramp up to 200 users over 2 minutes
+              { duration: '5m', target: 200 }, // Stay at 200 users for 5 minutes
+              { duration: '2m', target: 0 },   // Ramp down to 0 users over 2 minutes
+            ],
+            thresholds: {
+              http_req_duration: ['p(99)<1500'], // 99% of requests must complete below 1.5s
+            },
+          };
+
+          const BASE_URL = __ENV.BASE_URL || 'http://localhost:8000';
+
+          export default function () {
+            let responses = http.batch([
+              ['GET', `${BASE_URL}/`],
+              ['GET', `${BASE_URL}/wp-content/plugins/${{ github.event.repository.name }}/assets/css/style.css`],
+              ['GET', `${BASE_URL}/wp-content/plugins/${{ github.event.repository.name }}/assets/js/script.js`],
+            ]);
+
+            check(responses[0], {
+              'homepage status is 200': (r) => r.status === 200,
+              'homepage response time < 1000ms': (r) => r.timings.duration < 1000,
+            });
+
+            sleep(Math.random() * 3 + 1); // Random sleep between 1-4 seconds
+          }
+          EOF
+
+      - name: Run load test
+        run: k6 run load-test.js
+
+      - name: Upload load test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-results
+          path: |
+            load-test.js
+
+  wordpress-performance-regression:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout base branch
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git checkout ${{ github.base_ref }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysql, zip, gd, mbstring, curl, xml, intl
+
+      - name: Install dependencies (base)
+        run: |
+          composer install --no-dev --optimize-autoloader
+          npm ci
+          npm run build:production
+
+      - name: Measure base performance
+        run: |
+          # Simple performance measurement
+          php -r "
+          \$start = microtime(true);
+          require_once 'path/to/plugin-file.php';
+          \$end = microtime(true);
+          \$load_time = (\$end - \$start) * 1000;
+          file_put_contents('base-performance.json', json_encode(['load_time' => \$load_time]));
+          "
+
+      - name: Checkout PR branch
+        run: git checkout ${{ github.head_ref }}
+
+      - name: Install dependencies (PR)
+        run: |
+          composer install --no-dev --optimize-autoloader
+          npm ci
+          npm run build:production
+
+      - name: Measure PR performance
+        run: |
+          php -r "
+          \$start = microtime(true);
+          require_once 'path/to/plugin-file.php';
+          \$end = microtime(true);
+          \$load_time = (\$end - \$start) * 1000;
+          file_put_contents('pr-performance.json', json_encode(['load_time' => \$load_time]));
+          "
+
+      - name: Compare performance
+        run: |
+          BASE_TIME=$(jq '.load_time' base-performance.json)
+          PR_TIME=$(jq '.load_time' pr-performance.json)
+          DIFF=$(echo "scale=2; $PR_TIME - $BASE_TIME" | bc)
+          PERCENT_CHANGE=$(echo "scale=2; ($DIFF / $BASE_TIME) * 100" | bc)
+
+          echo "Base load time: $BASE_TIME ms"
+          echo "PR load time: $PR_TIME ms"
+          echo "Difference: $DIFF ms ($PERCENT_CHANGE%)"
+
+          # Fail if performance regression > 10%
+          if (( $(echo "$PERCENT_CHANGE > 10" | bc -l) )); then
+            echo "❌ Performance regression detected: $PERCENT_CHANGE% increase"
+            exit 1
+          else
+            echo "✅ Performance acceptable: $PERCENT_CHANGE% change"
+          fi
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const baseTime = parseFloat(require('fs').readFileSync('base-performance.json', 'utf8')).load_time;
+            const prTime = parseFloat(require('fs').readFileSync('pr-performance.json', 'utf8')).load_time;
+            const diff = prTime - baseTime;
+            const percentChange = ((diff / baseTime) * 100).toFixed(2);
+
+            const comment = `## Performance Comparison
+
+            | Metric | Base | PR | Change |
+            |--------|------|----|--------|
+            | Load Time | \${baseTime.toFixed(2)}ms | \${prTime.toFixed(2)}ms | \${diff > 0 ? '+' : ''}\${percentChange}% |
+
+            \${Math.abs(percentChange) > 10 ? '⚠️ Significant performance change detected' : '✅ Performance change within acceptable range'}`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  wordpress-performance-monitoring:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup monitoring
+        run: |
+          # Setup performance monitoring
+          echo "Setting up performance monitoring..."
+
+      - name: Generate performance report
+        run: |
+          # Generate weekly performance report
+          echo "# Weekly Performance Report" > performance-report.md
+          echo "Generated on: $(date)" >> performance-report.md
+          echo "" >> performance-report.md
+          echo "## Key Metrics" >> performance-report.md
+          echo "- Average response time: TBD" >> performance-report.md
+          echo "- Peak memory usage: TBD" >> performance-report.md
+          echo "- Database query count: TBD" >> performance-report.md
+          echo "- Asset bundle size: TBD" >> performance-report.md
+
+      - name: Upload performance report
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-performance-report
+          path: performance-report.md
+
+      - name: Send performance alert
+        if: failure()
+        run: |
+          # Send alert if performance thresholds are exceeded
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{"text":"🚨 Performance alert for ${{ github.repository }}"}' \
+            ${{ secrets.SLACK_WEBHOOK }}

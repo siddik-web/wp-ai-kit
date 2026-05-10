@@ -1,0 +1,29 @@
+name: Lighthouse
+
+on:
+  pull_request:
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v11
+        with:
+          urls: |
+            http://localhost:3000
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+          config: |
+            {
+              "extends": "lighthouse:default",
+              "settings": {
+                "onlyCategories": ["performance", "accessibility", "best-practices", "seo"]
+              }
+            }

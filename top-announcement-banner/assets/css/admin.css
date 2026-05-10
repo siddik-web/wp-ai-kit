@@ -1,0 +1,43 @@
+.tab-admin-preview {
+  margin-top: 24px;
+}
+
+.tab-banner-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border: 1px solid #ccd0d4;
+  border-radius: 10px;
+  background: #f7f7f7;
+}
+
+.tab-banner-preview-message {
+  flex: 1 1 auto;
+  margin-right: 16px;
+  font-weight: 600;
+}
+
+.tab-banner-preview-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: 1px solid #888;
+  background: #ffffff;
+  color: #222;
+  text-decoration: none;
+}
+
+@media (max-width: 782px) {
+  .tab-banner-preview {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tab-banner-preview-button {
+    width: 100%;
+    margin-top: 12px;
+  }
+}

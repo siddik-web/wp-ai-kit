@@ -1,0 +1,205 @@
+name: WordPress Security
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    # Run weekly security scans
+    - cron: '0 2 * * 1'
+
+jobs:
+  wordpress-security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysql, zip, gd, mbstring, curl, xml, intl
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      - name: WordPress Coding Standards Security Check
+        run: |
+          composer require --dev automattic/vipwpcs wp-coding-standards/wpcs
+          ./vendor/bin/phpcs --standard=WordPress-VIP-Go --severity=1 --extensions=php --ignore=vendor,node_modules .
+
+      - name: Security static analysis with Psalm
+        run: |
+          composer require --dev vimeo/psalm
+          ./vendor/bin/psalm --config=.psalm.xml --show-info=false
+
+      - name: Check for security vulnerabilities
+        run: |
+          composer audit --format=summary
+          npm audit --audit-level=moderate --json | jq '.vulnerabilities | keys[]'
+
+      - name: Scan for exposed secrets
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          config-path: .gitleaks.toml
+
+      - name: WordPress specific security checks
+        run: |
+          # Check for direct database queries
+          grep -r "\$wpdb->query(" src/ --include="*.php" || echo "No direct queries found"
+          # Check for eval usage
+          grep -r "eval(" src/ --include="*.php" || echo "No eval usage found"
+          # Check for file operations without validation
+          grep -r "file_get_contents(" src/ --include="*.php" | grep -v "wp_remote_get\|wp_safe_remote_get" || echo "File operations look safe"
+
+  wordpress-plugin-security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysql, zip, gd, mbstring, curl, xml, intl
+
+      - name: Install WordPress test environment
+        run: |
+          bash bin/install-wp-tests.sh wordpress_test root '' localhost latest true
+
+      - name: Run WordPress security tests
+        run: |
+          # Test for common security issues
+          composer test:security
+
+      - name: Check plugin headers
+        run: |
+          # Verify plugin headers are secure
+          php -r "
+          \$plugin_file = glob('*.php')[0];
+          \$content = file_get_contents(\$plugin_file);
+          if (!preg_match('/Plugin Name:/', \$content)) {
+            echo 'Missing Plugin Name header';
+            exit(1);
+          }
+          if (!preg_match('/Version:/', \$content)) {
+            echo 'Missing Version header';
+            exit(1);
+          }
+          echo 'Plugin headers OK';
+          "
+
+      - name: Validate nonces and capabilities
+        run: |
+          # Check for proper nonce verification
+          if grep -r "wp_verify_nonce" src/ --include="*.php" > /dev/null; then
+            echo "✓ Nonce verification found"
+          else
+            echo "⚠ No nonce verification found - review security"
+          fi
+
+          # Check for capability checks
+          if grep -r "current_user_can\|user_can" src/ --include="*.php" > /dev/null; then
+            echo "✓ Capability checks found"
+          else
+            echo "⚠ No capability checks found - review security"
+          fi
+
+  wordpress-dependency-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Scan PHP dependencies
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'WordPress Plugin'
+          path: '.'
+          format: 'ALL'
+          args: >
+            --enableRetired
+            --enableExperimental
+            --nvdValidForHours 24
+
+      - name: Upload dependency scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-scan-results
+          path: reports/
+
+  wordpress-accessibility:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Run accessibility tests
+        run: npm run test:a11y
+
+      - name: Check for accessibility issues in PHP templates
+        run: |
+          # Check for missing alt attributes
+          find src/ -name "*.php" -exec grep -l "<img" {} \; | xargs grep -L "alt=" || echo "All images have alt attributes"
+
+          # Check for proper form labels
+          find src/ -name "*.php" -exec grep -l "<input\|<select\|<textarea" {} \; | xargs grep -L "<label" || echo "Forms have labels"
+
+  wordpress-performance-security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysql, zip, gd, mbstring, curl, xml, intl
+
+      - name: Install WordPress test environment
+        run: |
+          bash bin/install-wp-tests.sh wordpress_test root '' localhost latest true
+
+      - name: Performance security tests
+        run: |
+          # Test for N+1 queries
+          composer test:performance
+
+      - name: Check for unescaped outputs
+        run: |
+          # Look for potential XSS vulnerabilities
+          grep -r "echo \$" src/ --include="*.php" | grep -v "esc_html\|esc_attr\|wp_kses" || echo "Outputs appear properly escaped"
+
+      - name: Validate SQL queries
+        run: |
+          # Check for prepared statements
+          if grep -r "\$wpdb->prepare" src/ --include="*.php" > /dev/null; then
+            echo "✓ Prepared statements found"
+          else
+            echo "⚠ No prepared statements found - review SQL security"
+          fi

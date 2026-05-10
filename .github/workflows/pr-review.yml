@@ -1,0 +1,39 @@
+name: PR Review Guardrails
+
+on:
+  pull_request:
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect TODOs
+        run: |
+          if grep -R "TODO\|FIXME" . \
+            --exclude-dir=node_modules \
+            --exclude-dir=.git
+          then
+            echo "Unresolved TODOs found"
+            exit 1
+          fi
+
+      - name: Prevent console.log
+        run: |
+          if grep -R "console.log(" src
+          then
+            echo "console.log detected"
+            exit 1
+          fi
+
+      - name: Large diff warning
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request
+            if (pr.additions > 1000) {
+              core.setFailed("PR too large. Keep diffs reviewable.")
+            }
+
