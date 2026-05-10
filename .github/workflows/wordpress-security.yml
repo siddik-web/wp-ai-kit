@@ -81,7 +81,11 @@ jobs:
         run: |
           # Verify plugin headers are secure
           php -r "
-          \$plugin_file = glob('*.php')[0];
+          \$plugin_file = 'top-announcement-banner/top-announcement-banner.php';
+          if (!file_exists(\$plugin_file)) {
+            echo 'Plugin bootstrap file not found: ' . \$plugin_file;
+            exit(1);
+          }
           \$content = file_get_contents(\$plugin_file);
           if (!preg_match('/Plugin Name:/', \$content)) {
             echo 'Missing Plugin Name header';
